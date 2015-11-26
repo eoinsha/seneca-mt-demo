@@ -1,9 +1,16 @@
-'use strict';
+'use strict'
 const seneca = require('seneca')()
-const senecaContet = require('seneca-context')
+const senecaContext = require('seneca-context')
 
-seneca.add({role:'api', cmd:'post'}, (args, done) => {
-  seneca.make('blog/posts').save$(args.post, done)
+seneca.use(require('seneca-context/plugins/setContext'), {createContext: (req, res, context, done) => {
+  const tenant = req.hostname.match(/([^\.]+)/)[1]
+  setImmediate(() => done(null, {tenant}))
+}})
+
+seneca.add({role:'api', cmd:'post'}, function (args, done) {
+  const si = this
+  console.log('Context is', senecaContext.getContext(si).tenant)
+  si.make('blog/posts').save$(args.post, done)
 })
 
 seneca.act({role:'web', use:{
