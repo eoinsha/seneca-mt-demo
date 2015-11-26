@@ -11,7 +11,7 @@ seneca.use(require('seneca-context/plugins/setContext'), {createContext: (req, r
 
 // Blog microservice
 seneca.add({role:'api', cmd:'post'}, function (args, done) {
-  this.make('blog/posts').save$(args.post, done)
+  this.make('blog/posts').save$({content: args.post}, done)
 })
 
 // Blog API
@@ -30,17 +30,18 @@ const opts = { host: '127.0.0.1', port: 27017 };
 // Store Interceptor
 seneca.ready(() => {
   seneca.wrap({role:'entity'}, function (interceptedMessage, done) {
-    const seneca = this
-    const message = seneca.util.clean(interceptedMessage)
+    const si = this
+    const message = si.util.clean(interceptedMessage)
     if (_.isUndefined(message.zone) && !(message.base === 'sys' && message.name === 'entity')) {
       const data = message.ent.data$()
-      const context = senecaContext.getContext(seneca)
+      const context = senecaContext.getContext(si)
       const canon = message.ent.canon$({object: true})
-      message.ent = seneca.make$(context.tenant, canon.base, canon.name).data$(data)
+      message.ent = si.make$(context.tenant, canon.base, canon.name).data$(data)
       message.qent = message.qent && message.ent
       message.zone = context.tenant
+      return si.act(message, done)
     } 
-    return seneca.prior(message, done)
+    return si.prior(message, done)
   })
   // Application Server
   const app = require('express')()
